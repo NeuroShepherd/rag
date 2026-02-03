@@ -2,6 +2,8 @@
 
 import argparse
 import json
+from icecream import ic
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Keyword Search CLI")
@@ -10,10 +12,14 @@ def main() -> None:
     search_parser = subparsers.add_parser("search", help="Search movies using BM25")
     search_parser.add_argument("query", type=str, help="Search query")
 
+    hello_parser = subparsers.add_parser("hello", help="Print hello message")
+    hello_parser.add_argument("--name", type=str, help="Your name", default="User")
+
     args = parser.parse_args()
 
     movies = load_movies("data/movies.json")
 
+    # breakpoint()
 
     match args.command:
         case "search":
@@ -27,6 +33,10 @@ def main() -> None:
                     counter += 1
                     if counter > 5:
                         break
+        case "hello":
+            print("Hello! This is the Keyword Search CLI.")
+            if args.name:
+                print(f"Hello, {args.name}!")
         case _:
             parser.print_help()
 
