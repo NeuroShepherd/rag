@@ -21,14 +21,17 @@ def main() -> None:
             # print the search query here
             counter = 1
             print(f"Searching for: {args.query}")
-            # ic(f"Searching for: {args.query}")
+            # breakpoint()
             for movie in (movies):
                 # breakpoint()
-                if normalize_text(args.query) in normalize_text(movie["title"]):
+                query_words = normalize_text(args.query)
+                title_words = normalize_text(movie["title"])
+                if any(q in t for q in query_words for t in title_words):
                     print(f"{movie['id']}. Movie Title {movie['title']}")
                     counter += 1
                     if counter > 5:
                         break
+                    
         case _:
             parser.print_help()
 
