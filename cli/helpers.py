@@ -10,7 +10,8 @@ def load_movies(file_path: str) -> dict:
     return data["movies"]
 
 
-def normalize_text(text: str) -> str:
+def normalize_text(text: str) -> list[str]:
     text = text.lower()
     text = text.translate(str.maketrans("","",string.punctuation))
+    text = text.split()
     return text
