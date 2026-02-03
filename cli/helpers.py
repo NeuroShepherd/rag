@@ -1,6 +1,7 @@
 
 import json
 import string
+from nltk.stem import PorterStemmer
 
 
 
@@ -11,11 +12,14 @@ def load_movies(file_path: str) -> dict:
 
 
 def normalize_text(text: str, stop_words: list[str] | None = None) -> list[str]:
+    stemmer = PorterStemmer()
+
     text = text.lower()
     text = text.translate(str.maketrans("","",string.punctuation))
     text = text.split()
     if stop_words is not None:
         text = [word for word in text if word not in stop_words]
+    text = [stemmer.stem(word) for word in text]
     return text
 
 
