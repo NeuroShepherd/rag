@@ -1,5 +1,7 @@
 
 import json
+import string
+
 
 
 def load_movies(file_path: str) -> dict:

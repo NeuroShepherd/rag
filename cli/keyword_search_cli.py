@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import string
 from helpers import load_movies, normalize_text
 
 def main() -> None:
