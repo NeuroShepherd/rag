@@ -7,6 +7,21 @@ import pickle
 
 
 
+def search(args, movies, stop_words):
+    counter = 1
+    print(f"Searching for: {args.query}")
+    # breakpoint()
+    for movie in (movies):
+        # breakpoint()
+        query_words = normalize_text(args.query, stop_words=stop_words)
+        title_words = normalize_text(movie["title"], stop_words=stop_words)
+        if any(q in t for q in query_words for t in title_words):
+            print(f"{movie['id']}. Movie Title {movie['title']}")
+            counter += 1
+            if counter > 5:
+                break
+
+
 def load_movies(file_path: str) -> dict:
     with open(file_path, "r") as f:
         data = json.load(f)
@@ -65,10 +80,17 @@ class InvertedIndex():
         with open("cache/docmap.pkl", "wb") as f:
             pickle.dump(self.docmap, f)
 
+    def load(self):
+        with open("cache/index.pkl", "rb") as f:
+            self.index = pickle.load(f)
+        
+        with open("cache/docmap.pkl", "rb") as f:
+            self.docmap = pickle.load(f)
 
-def build_command() -> None:
+
+def build_command(token: str) -> None:
     index = InvertedIndex()
     index.build()
     index.save()
-    docs = index.get_documents("merida")
-    print(f"First document for token 'merida' = {docs[0]}")
+    docs = index.get_documents(token)
+    print(f"First document for token {token} = {docs[0]}")

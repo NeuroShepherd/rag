@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-from helpers import load_movies, normalize_text, load_stop_words, build_command
+from helpers import load_movies, load_stop_words, build_command, search
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Keyword Search CLI")
@@ -28,18 +28,7 @@ def main() -> None:
             build_command()
         case "search":
             # print the search query here
-            counter = 1
-            print(f"Searching for: {args.query}")
-            # breakpoint()
-            for movie in (movies):
-                # breakpoint()
-                query_words = normalize_text(args.query, stop_words=stop_words)
-                title_words = normalize_text(movie["title"], stop_words=stop_words)
-                if any(q in t for q in query_words for t in title_words):
-                    print(f"{movie['id']}. Movie Title {movie['title']}")
-                    counter += 1
-                    if counter > 5:
-                        break
+            search(args, movies, stop_words)
                     
         case _:
             parser.print_help()
