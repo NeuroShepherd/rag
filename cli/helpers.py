@@ -8,18 +8,25 @@ import pickle
 
 
 def search(args, movies, stop_words):
-    counter = 1
     print(f"Searching for: {args.query}")
-    # breakpoint()
-    for movie in (movies):
-        # breakpoint()
-        query_words = normalize_text(args.query, stop_words=stop_words)
-        title_words = normalize_text(movie["title"], stop_words=stop_words)
-        if any(q in t for q in query_words for t in title_words):
-            print(f"{movie['id']}. Movie Title {movie['title']}")
-            counter += 1
-            if counter > 5:
-                break
+    
+    # Load the inverted index
+    index = InvertedIndex()
+    index.load()
+    
+    # Normalize query to get tokens
+    query_tokens = normalize_text(args.query, stop_words=stop_words)
+    
+    # Collect matching document IDs
+    matching_docs = set()
+    for token in query_tokens:
+        doc_ids = index.get_documents(token)
+        matching_docs.update(doc_ids)
+    
+    # Print results (up to 5)
+    for doc_id in sorted(matching_docs)[:5]:
+        movie = index.docmap[doc_id]
+        print(f"{movie['id']}. {movie['title']}")
 
 
 def load_movies(file_path: str) -> dict:
