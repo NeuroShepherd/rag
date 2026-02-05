@@ -5,6 +5,7 @@ from nltk.stem import PorterStemmer
 import os
 import pickle
 from collections import Counter, defaultdict
+import math
 
 
 
@@ -82,6 +83,16 @@ class InvertedIndex():
         if doc_id not in self.term_frequencies:
             return 0
         return self.term_frequencies[doc_id].get(normalized_term, 0)
+    
+    def get_idf(self, term: str) -> float:
+        normalized_term = normalize_text(term)
+        if not normalized_term:
+            return 0.0
+        normalized_term = normalized_term[0]
+        total_docs = len(self.docmap)
+        docs_with_term = len(self.index.get(normalized_term, []))
+
+        return math.log((total_docs + 1) / (docs_with_term + 1))
 
     def build(self, file_path: str = "data/movies.json"):
         movies = load_movies(file_path)

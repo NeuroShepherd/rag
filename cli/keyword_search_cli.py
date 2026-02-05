@@ -19,6 +19,11 @@ def main() -> None:
     tf_parser.add_argument("doc_id", type=int, help="Document ID")
     tf_parser.add_argument("term", type=str, help="Term to get frequency for")
 
+    # inverse document frequency parser
+    idf_parser = subparsers.add_parser("idf", help="Get inverse document frequency for a term")
+    idf_parser.add_argument("term", type=str, help="Term to get IDF")
+
+
 
 
     args = parser.parse_args()
@@ -42,6 +47,11 @@ def main() -> None:
                 print(f"doc_id: {args.doc_id}, term: '{args.term}', frequency: {freq}")
             else:
                 print(0)
+        case "idf":
+            index = InvertedIndex()
+            index.load()
+            idf_value = index.get_idf(args.term)
+            print(f"Inverse document frequency of '{args.term}': {idf_value:.2f}")
         case _:
             parser.print_help()
 
