@@ -4,6 +4,7 @@ import string
 from nltk.stem import PorterStemmer
 import os
 import pickle
+from collections import Counter, defaultdict
 
 
 
@@ -57,6 +58,7 @@ class InvertedIndex():
     def __init__(self) -> None:
         self.index = {}
         self.docmap = {}
+        self.term_frequencies = defaultdict(Counter)
 
     def __add_document(self, doc_id, text):
         tokens = normalize_text(text)
@@ -64,10 +66,22 @@ class InvertedIndex():
             if token not in self.index:
                 self.index[token] = set()
             self.index[token].add(doc_id)
+            self.term_frequencies[doc_id][token] += 1
 
     def get_documents(self, token: str):
         value = self.index.get(token, set())
         return sorted(value)
+    
+    def get_tf(self, doc_id: int, term: str):
+        # Normalize the term first
+        normalized_term = normalize_text(term)
+        if not normalized_term:
+            return 0
+        normalized_term = normalized_term[0]
+        
+        if doc_id not in self.term_frequencies:
+            return 0
+        return self.term_frequencies[doc_id].get(normalized_term, 0)
 
     def build(self, file_path: str = "data/movies.json"):
         movies = load_movies(file_path)
@@ -87,6 +101,9 @@ class InvertedIndex():
         with open("cache/docmap.pkl", "wb") as f:
             pickle.dump(self.docmap, f)
 
+        with open("cache/term_frequencies.pkl", "wb") as f:
+            pickle.dump(self.term_frequencies, f)
+
     def load(self):
         with open("cache/index.pkl", "rb") as f:
             self.index = pickle.load(f)
@@ -94,10 +111,12 @@ class InvertedIndex():
         with open("cache/docmap.pkl", "rb") as f:
             self.docmap = pickle.load(f)
 
+        with open("cache/term_frequencies.pkl", "rb") as f:
+            self.term_frequencies = pickle.load(f)
 
-def build_command(token: str) -> None:
+
+def build_command() -> None:
     index = InvertedIndex()
     index.build()
     index.save()
-    docs = index.get_documents(token)
-    print(f"First document for token {token} = {docs[0]}")
+
