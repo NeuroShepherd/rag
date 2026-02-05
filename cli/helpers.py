@@ -9,12 +9,7 @@ import math
 
 
 
-def search(args, movies, stop_words):
-    print(f"Searching for: {args.query}")
-    
-    # Load the inverted index
-    index = InvertedIndex()
-    index.load()
+def search(index, args, movies, stop_words):
     
     # Normalize query to get tokens
     query_tokens = normalize_text(args.query, stop_words=stop_words)

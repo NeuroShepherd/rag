@@ -37,8 +37,13 @@ def main() -> None:
         case "build":
             build_command()
         case "search":
+            print(f"Searching for: {args.query}")
+    
+            # Load the inverted index
+            index = InvertedIndex()
+            index.load()
             # print the search query here
-            search(args, movies, stop_words)
+            search(index, args, movies, stop_words)
         case "tf":
             index = InvertedIndex()
             index.load()
