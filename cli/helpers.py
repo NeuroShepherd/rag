@@ -88,6 +88,11 @@ class InvertedIndex():
         docs_with_term = len(self.index.get(normalized_term, []))
 
         return math.log((total_docs + 1) / (docs_with_term + 1))
+    
+    def get_tfidf(self, doc_id: int, term: str) -> float:
+        tf = self.get_tf(doc_id, term)
+        idf = self.get_idf(term)
+        return tf * idf
 
     def build(self, file_path: str = "data/movies.json"):
         movies = load_movies(file_path)
