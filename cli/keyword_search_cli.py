@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-from helpers import load_movies, load_stop_words, build_command, search, InvertedIndex
+from helpers import load_movies, load_stop_words, build_command, search, InvertedIndex, BM25_K1
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Keyword Search CLI")
@@ -31,6 +31,12 @@ def main() -> None:
     # bm25idf parser
     bm25idf_parser = subparsers.add_parser("bm25idf", help="Get BM25 IDF score for a term")
     bm25idf_parser.add_argument("term", type=str, help="Term to get BM25 IDF score for")
+    
+    # bm25tf parser
+    bm25_tf_parser = subparsers.add_parser("bm25tf", help="Get BM25 TF score for a given document ID and term")
+    bm25_tf_parser.add_argument("doc_id", type=int, help="Document ID")
+    bm25_tf_parser.add_argument("term", type=str, help="Term to get BM25 TF score for")
+    bm25_tf_parser.add_argument("k1", type=float, nargs='?', default=BM25_K1, help="Tunable BM25 K1 parameter")
 
 
     args = parser.parse_args()
@@ -74,6 +80,11 @@ def main() -> None:
             index.load()
             bm25idf_value = index.get_bm25idf(args.term)
             print(f"BM25 IDF score of '{args.term}': {bm25idf_value:.2f}")
+        case "bm25tf":
+            index = InvertedIndex()
+            index.load()
+            bm25tf_value = index.get_bm25_tf(args.doc_id, args.term, k1=args.k1)
+            print(f"BM25 TF score of '{args.term}' in document '{args.doc_id}': {bm25tf_value:.2f}")
         case _:
             parser.print_help()
 

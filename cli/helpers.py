@@ -7,7 +7,7 @@ import pickle
 from collections import Counter, defaultdict
 import math
 
-
+BM25_K1 = 1.5
 
 def search(index, args, movies, stop_words):
     
@@ -104,6 +104,11 @@ class InvertedIndex():
         # IDF = log((N - df + 0.5) / (df + 0.5) + 1)
         bm25 = math.log((total_docs - docs_with_term + 0.5) / (docs_with_term + 0.5) + 1)
         return bm25
+    
+    def get_bm25_tf(self, doc_id, term, k1=BM25_K1):
+        tf = self.get_tf(doc_id, term)
+        tf_component = (tf * (k1 + 1)) / (tf + k1)
+        return tf_component
         
 
     def build(self, file_path: str = "data/movies.json"):
