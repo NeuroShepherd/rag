@@ -3,7 +3,7 @@
 #!/usr/bin/env python3
 
 import argparse
-from semantic_search import SemanticSearch, verify_model, embed_text, verify_embeddings
+from semantic_search import SemanticSearch, verify_model, embed_text, verify_embeddings, embed_query_text
 
 def main():
     parser = argparse.ArgumentParser(description="Semantic Search CLI")
@@ -19,6 +19,12 @@ def main():
     # verify_embeddings parser
     verify_embed_parser = subparsers.add_parser("verify_embeddings", help="Verify that embeddings can be generated and loaded correctly")
 
+    # embedquery parser
+    embed_query_parser = subparsers.add_parser("embedquery", help="Generate embedding for a search query")
+    embed_query_parser.add_argument("query", type=str, help="Search query to generate embedding for")
+
+
+
     args = parser.parse_args()
 
     match args.command:
@@ -28,6 +34,8 @@ def main():
             embed_text(args.text)
         case "verify_embeddings":
             verify_embeddings()
+        case "embedquery":
+            embed_query_text(args.query)
         case _:
             parser.print_help()
 
