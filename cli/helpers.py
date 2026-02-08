@@ -98,7 +98,7 @@ class InvertedIndex():
         idf = self.get_idf(term)
         return tf * idf
     
-    def get_bm25idf(self, term: str) -> float:
+    def get_bm25_idf(self, term: str) -> float:
         normalized_term = normalize_text(term)
         if not normalized_term:
             return 0.0

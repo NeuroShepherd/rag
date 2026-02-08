@@ -79,7 +79,7 @@ def main() -> None:
         case "bm25idf":
             index = InvertedIndex()
             index.load()
-            bm25idf_value = index.get_bm25idf(args.term)
+            bm25idf_value = index.get_bm25_idf(args.term)
             print(f"BM25 IDF score of '{args.term}': {bm25idf_value:.2f}")
         case "bm25tf":
             index = InvertedIndex()
