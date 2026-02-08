@@ -59,8 +59,8 @@ class InvertedIndex():
         self.doc_lengths = {}
         self.doc_lengths_path =  "cache/doc_lengths.pkl"
 
-    def __add_document(self, doc_id, text):
-        tokens = normalize_text(text)
+    def __add_document(self, doc_id, text, stop_words=None):
+        tokens = normalize_text(text, stop_words=stop_words)
         for token in tokens:
             if token not in self.index:
                 self.index[token] = set()
@@ -117,19 +117,36 @@ class InvertedIndex():
         tf_component = (tf * (k1 + 1)) / (tf + k1*length_norm)
         return tf_component
     
+    def bm25(self, doc_id, term):
+        idf = self.get_bm25_idf(term)
+        tf_component = self.get_bm25_tf(doc_id, term)
+        return idf * tf_component
+    
+    def bm25_search(self, query, limit, stop_words=None):
+        query_tokens = normalize_text(query, stop_words=stop_words)
+        scores = {}
+        for token in query_tokens:
+            for doc_id in self.get_documents(token):
+                if doc_id not in scores:
+                    scores[doc_id] = 0
+                scores[doc_id] += self.bm25(doc_id, token)
+        ranked_docs = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        # return the top limit documents along with their scores
+        return ranked_docs[:limit]
+    
     def __get_avg_doc_length(self) -> float:
         if not self.doc_lengths:
             return 0
         return sum(self.doc_lengths.values()) / len(self.doc_lengths)
         
 
-    def build(self, file_path: str = "data/movies.json"):
+    def build(self, file_path: str = "data/movies.json", stop_words: list[str] | None = None):
         movies = load_movies(file_path)
         for movie in movies:
             doc_id = movie["id"]
             self.docmap[doc_id] = movie
             text = f"{movie['title']} {movie['description']}"
-            self.__add_document(doc_id, text)
+            self.__add_document(doc_id, text, stop_words=stop_words)
 
 
     def save(self):
@@ -161,8 +178,8 @@ class InvertedIndex():
             self.doc_lengths = pickle.load(f)
 
 
-def build_command() -> None:
+def build_command(stop_words: list[str] | None = None) -> None:
     index = InvertedIndex()
-    index.build()
+    index.build(stop_words=stop_words)
     index.save()
 
