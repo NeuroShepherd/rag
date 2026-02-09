@@ -3,6 +3,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import json
 from semantic_search import SemanticSearch, verify_model, embed_text, verify_embeddings, embed_query_text
 
 def main():
@@ -23,6 +24,11 @@ def main():
     embed_query_parser = subparsers.add_parser("embedquery", help="Generate embedding for a search query")
     embed_query_parser.add_argument("query", type=str, help="Search query to generate embedding for")
 
+    # search parser
+    search_parser = subparsers.add_parser("search", help="Search for movies using semantic search")
+    search_parser.add_argument("query", type=str, help="Search query")
+    search_parser.add_argument("--limit", type=int, default=5, help="Number of results to return")
+
 
 
     args = parser.parse_args()
@@ -36,6 +42,16 @@ def main():
             verify_embeddings()
         case "embedquery":
             embed_query_text(args.query)
+        case "search":
+            search = SemanticSearch()
+            with open("data/movies.json", "r") as f:
+                data = json.load(f)
+            documents = data["movies"]
+            search.load_or_create_embeddings(documents)
+            results = search.search(args.query, args.limit)
+            for i, result in enumerate(results):
+                score, title, description = result["score"], result["title"], result["description"]
+                print(f"{i}. {title} (score: {score:.4f})\n{description}\n")
         case _:
             parser.print_help()
 
