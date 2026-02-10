@@ -4,7 +4,7 @@
 
 import argparse
 import json
-from semantic_search import SemanticSearch, verify_model, embed_text, verify_embeddings, embed_query_text
+from semantic_search import SemanticSearch, verify_model, embed_text, verify_embeddings, embed_query_text, chunk_text
 
 def main():
     parser = argparse.ArgumentParser(description="Semantic Search CLI")
@@ -29,6 +29,11 @@ def main():
     search_parser.add_argument("query", type=str, help="Search query")
     search_parser.add_argument("--limit", type=int, default=5, help="Number of results to return")
 
+    # chunking parser
+    chunk_parser = subparsers.add_parser("chunk", help="Test text chunking functionality")
+    chunk_parser.add_argument("text", type=str, help="Text to chunk")
+    chunk_parser.add_argument("-cs", "--chunk-size", type=int, default=200, help="Chunk size in characters")
+
 
 
     args = parser.parse_args()
@@ -52,6 +57,9 @@ def main():
             for i, result in enumerate(results):
                 score, title, description = result["score"], result["title"], result["description"]
                 print(f"{i}. {title} (score: {score:.4f})\n{description}\n")
+        case "chunk":
+            chunk_text(args.text, chunk_size=args.chunk_size)
+
         case _:
             parser.print_help()
 
