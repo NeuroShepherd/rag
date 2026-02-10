@@ -2,7 +2,7 @@
 from sentence_transformers import SentenceTransformer
 from torch import embedding
 import numpy as np
-import os, json
+import os, json, re
 
 class SemanticSearch():
     def __init__(self) -> None:
@@ -114,13 +114,25 @@ def cosine_similarity(vec1, vec2):
     return dot_product / (norm1 * norm2)
 
 
-def chunk_text(text, chunk_size=200):
-    words = text.split()
+def chunk_text(text, chunk_size=200, overlap=0):
+    words = re.split(r"(?<=[.!?])\s+", text)
     chunks = [words[i:i + chunk_size] for i in range(0, len(words), chunk_size)]
 
     # To get strings instead of lists:
-    chunks = [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
+    chunks = [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size - overlap)]
 
     print(f"Chunking {len(text)} characters")
+    for i, chunk in enumerate(chunks):
+        print(f"{i+1}. {chunk}")
+
+def semantic_chunking(text, max_chunk_size=4, overlap=0):
+    # Split on '. ' but keep the period with each sentence
+    sentences = re.split(r'(?<=\.)\s+', text)
+    chunks = [sentences[i:i + max_chunk_size] for i in range(0, len(sentences), max_chunk_size)]
+
+    # To get strings instead of lists:
+    chunks = [' '.join(sentences[i:i + max_chunk_size]) for i in range(0, len(sentences), max_chunk_size - overlap)]
+
+    print(f"Semantically chunking {len(text)} characters")
     for i, chunk in enumerate(chunks):
         print(f"{i+1}. {chunk}")

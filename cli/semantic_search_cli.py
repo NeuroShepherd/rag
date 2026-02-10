@@ -4,7 +4,7 @@
 
 import argparse
 import json
-from semantic_search import SemanticSearch, verify_model, embed_text, verify_embeddings, embed_query_text, chunk_text
+from semantic_search import SemanticSearch, verify_model, embed_text, verify_embeddings, embed_query_text, chunk_text, semantic_chunking
 
 def main():
     parser = argparse.ArgumentParser(description="Semantic Search CLI")
@@ -33,6 +33,13 @@ def main():
     chunk_parser = subparsers.add_parser("chunk", help="Test text chunking functionality")
     chunk_parser.add_argument("text", type=str, help="Text to chunk")
     chunk_parser.add_argument("-cs", "--chunk-size", type=int, default=200, help="Chunk size in characters")
+    chunk_parser.add_argument("-o", "--overlap", type=int, default=0, help="Number of words to overlap between chunks")
+
+    # semantic chunking parser
+    semantic_chunk_parser = subparsers.add_parser("semantic_chunk", help="Test semantic chunking functionality")
+    semantic_chunk_parser.add_argument("text", type=str, help="Text to chunk semantically")
+    semantic_chunk_parser.add_argument("--max-chunk-size", type=int, default=4, help="Maximum number of sentences per chunk")
+    semantic_chunk_parser.add_argument("--overlap", type=int, default=0, help="Number of sentences to overlap between chunks")
 
 
 
@@ -58,8 +65,9 @@ def main():
                 score, title, description = result["score"], result["title"], result["description"]
                 print(f"{i}. {title} (score: {score:.4f})\n{description}\n")
         case "chunk":
-            chunk_text(args.text, chunk_size=args.chunk_size)
-
+            chunk_text(args.text, chunk_size=args.chunk_size, overlap=args.overlap)
+        case "semantic_chunk":
+            semantic_chunking(args.text, max_chunk_size=args.max_chunk_size, overlap=args.overlap)
         case _:
             parser.print_help()
 
