@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from helpers import InvertedIndex
 from semantic_search import ChunkedSemanticSearch
 from dotenv import load_dotenv
@@ -109,7 +110,25 @@ class HybridSearch:
                     sleep(30)
                     llm_score = llm_rerank(query, result, rerank_method)
                 result["llm_score"] = round(float(llm_score), 4)
-            final_output = sorted(final_output, key=lambda x: x["llm_score"], reverse=True)[:limit]
+
+        if rerank_method == "batch":
+            print(f"Reranking top {len(final_output)} documents in batch...")
+            
+            try:
+                rerank_response = llm_rerank(query, final_output, rerank_method)
+            except Exception as e:
+                print(f"Error during LLM batch reranking: {e}")
+                print("Sleeping for 4 mins and retrying")
+                sleep(30)
+                rerank_response = llm_rerank(query, final_output, rerank_method)
+
+
+            id_to_result = {result["id"]: result for result in final_output}
+            reranked = [id_to_result[doc_id] for doc_id in rerank_response if doc_id in id_to_result]
+            # Preserve LLM order and attach a simple rank-based score for display.
+            for rank, result in enumerate(reranked, start=1):
+                result["llm_score"] = round((len(reranked) - rank + 1) / len(reranked) * 10, 4)
+            final_output = reranked[:limit]
 
         return final_output
     
@@ -252,9 +271,35 @@ def llm_rerank(query, results, rerank_method):
 
                     Score:"""
         
+
+    if rerank_method == "batch":
+        doc_list_str = ""
+        for result in results:
+            doc_list_str += f'ID: {result["id"]}\nTitle: {result["title"]}\nDescription: {result["document"]}\n\n'
+        contents = f"""Rank these movies by relevance to the search query.
+
+                    Query: "{query}"
+
+                    Movies:
+                    {doc_list_str}
+
+                    Return ONLY the IDs in order of relevance (best match first). Return a valid JSON list, nothing else. For example:
+
+                    [75, 12, 34, 2, 1]
+                    """
+        
     response = client.models.generate_content(
         model=model,
         contents=contents,
     )
+    
+    if rerank_method == "individual":
+        return response.text.strip()
+    elif rerank_method == "batch":
+        # Extract JSON from markdown code blocks
+        match = re.search(r"\[.*\]", response.text, re.S)
+        if match:
+            return json.loads(match.group())
+        return json.loads(response.text.strip())
     
     return response.text.strip()
