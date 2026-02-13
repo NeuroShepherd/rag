@@ -127,6 +127,24 @@ class HybridSearch:
                         - "scary movie with bear from few years ago" -> "bear horror movie 2015-2020"
 
                         Rewritten query:"""
+            
+        if method == "expand":
+            contents = f"""Expand this movie search query with related terms.
+
+                        Add synonyms and related concepts that might appear in movie descriptions.
+                        Keep expansions relevant and focused.
+                        This will be appended to the original query.
+
+                        Examples:
+
+                        - "scary bear movie" -> "scary horror grizzly bear movie terrifying film"
+                        - "action movie with bear" -> "action thriller bear chase fight adventure"
+                        - "comedy with bear" -> "comedy funny bear humor lighthearted"
+
+                        Query: "{query}"
+                        """
+
+
 
 
         response = client.models.generate_content(

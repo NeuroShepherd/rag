@@ -21,7 +21,8 @@ def main() -> None:
     rrf_parser.add_argument("query", type=str, help="Search query")
     rrf_parser.add_argument("-k", type=int, default=60, help="RRF parameter k")
     rrf_parser.add_argument("--limit", type=int, default=5, help="Number of results to return")
-    rrf_parser.add_argument("--enhance", type=str, choices=["spell", "rewrite"], help="Query enhancement method")
+    rrf_parser.add_argument("--enhance", type=str, choices=["spell", "rewrite", "expand"], help="Query enhancement method")
+    rrf_parser.add_argument("--rerank-method", type=str, choices=["individual"], help="Method for reranking results after fusion")
 
 
 
