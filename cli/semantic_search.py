@@ -162,12 +162,16 @@ class ChunkedSemanticSearch(SemanticSearch):
 
         final_output = []
         for movie in filtered_movies_by_limit:
+            movie_id = movie[0]
+            # Skip if movie doesn't exist in document_map (can happen if cache is stale)
+            if movie_id not in self.document_map:
+                continue
             final_output.append({
-                "id": movie[0],
-                "title": self.document_map[movie[0]]["title"],
-                "document": self.document_map[movie[0]]["description"][:100],
+                "id": movie_id,
+                "title": self.document_map[movie_id]["title"],
+                "document": self.document_map[movie_id]["description"][:100],
                 "score": round(max(movie[1]), 4),
-                "metadata": self.document_map[movie[0]].get("metadata", {}) # mot really sure which metadata is expected here?
+                "metadata": self.document_map[movie_id].get("metadata", {}) # mot really sure which metadata is expected here?
             })
 
         return final_output

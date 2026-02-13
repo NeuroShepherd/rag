@@ -2,6 +2,8 @@ import os
 import json
 from helpers import InvertedIndex
 from semantic_search import ChunkedSemanticSearch
+from dotenv import load_dotenv
+from google import genai
 
 
 class HybridSearch:
@@ -51,8 +53,65 @@ class HybridSearch:
         sorted_docs = sorted(combined_scores.items(), key=lambda x: x[1]["combined"], reverse=True)
         return [(doc_id, scores["combined"], scores["bm25"], scores["semantic"]) for doc_id, scores in sorted_docs[:limit]]
 
-    def rrf_search(self, query, k, limit=10):
-        raise NotImplementedError("RRF hybrid search is not implemented yet.")
+    def rrf_search(self, query, k, limit=10, enhance=None):
+        if enhance == "spell":
+            query_original = query
+            query = self.enhance_query(query, method="spell")
+            print(f"Enhanced query ({enhance}): '{query_original}' -> '{query}'\n")
+
+        bm25_results = self._bm25_search(query, limit*500)
+        semantic_results = self.semantic_search.search_chunks(query, limit*500)
+        bm25_map = {doc_id: rank for rank, (doc_id, score) in enumerate(bm25_results)}
+        semantic_map = {result["id"]: rank for rank, result in enumerate(semantic_results)}
+        all_doc_ids = set(bm25_map.keys()) | set(semantic_map.keys())
+
+        rrf_scores = {}
+        for doc_id in all_doc_ids:
+            bm25_rank = bm25_map.get(doc_id, float('inf'))
+            semantic_rank = semantic_map.get(doc_id, float('inf'))
+            rrf_scores[doc_id] = {
+                "score": (1 / (k + bm25_rank)) + (1 / (k + semantic_rank)),
+                "bm25_rank": bm25_rank,
+                "semantic_rank": semantic_rank
+            }
+        sorted_docs = sorted(rrf_scores.items(), key=lambda x: x[1]["score"], reverse=True)
+
+        final_output = []
+        for doc_id, score_data in sorted_docs[:limit]:
+            final_output.append({
+                "id": doc_id,
+                "title": self.semantic_search.document_map[doc_id]["title"],
+                "document": self.semantic_search.document_map[doc_id]["description"][:100],
+                "score": round(score_data["score"], 4),
+                "metadata": {
+                    "bm25_rank": score_data["bm25_rank"] if score_data["bm25_rank"] != float('inf') else "N/A",
+                    "semantic_rank": score_data["semantic_rank"] if score_data["semantic_rank"] != float('inf') else "N/A"
+                }
+            })
+        return final_output
+    
+    def enhance_query(self, query, method):
+        load_dotenv()
+        api_key = os.environ.get("GEMINI_API_KEY")
+        print(f"Using key {api_key[:6]}...")
+
+        client = genai.Client(api_key=api_key)
+
+        contents = f"""Fix any spelling errors in this movie search query.
+
+                    Only correct obvious typos. Don't change correctly spelled words.
+
+                    Query: "{query}"
+
+                    If no errors, return the original query.
+                    Corrected:"""
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=contents,
+        )
+        
+        return response.text.strip()
     
 
 
@@ -85,3 +144,16 @@ def weighted_search_text(query, alpha, limit=5):
     for i, result in enumerate(results):
         title = search.semantic_search.document_map[result[0]]['title']
         print(f"{i+1}. {title}\nHybrid score: {result[1]:.4f}\nBM25: {result[2]:.4f}, Semantic: {result[3]:.4f}\n{search.semantic_search.document_map[result[0]]['description'][:200]}...\n")
+
+def rrf_search_text(query, k, limit=5, enhance=None):
+    with open("data/movies.json", "r") as f:
+        data = json.load(f)
+    documents = data["movies"]
+    
+    search = HybridSearch(documents=documents)
+    results = search.rrf_search(query, k, limit, enhance)
+    for i, result in enumerate(results):
+        print(f"{i+1}. {result['title']}")
+        print(f"RRF score: {result['score']:.4f}")
+        print(f"BM25 Rank: {result['metadata'].get('bm25_rank', 'N/A')}, Semantic Rank: {result['metadata'].get('semantic_rank', 'N/A')}")
+        print(f"{result['document']}...\n")

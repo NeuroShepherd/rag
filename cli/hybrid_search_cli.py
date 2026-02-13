@@ -1,5 +1,5 @@
 import argparse
-from hybrid_search import normalize_scores_text, weighted_search_text
+from hybrid_search import normalize_scores_text, weighted_search_text, rrf_search_text
 
 
 def main() -> None:
@@ -16,6 +16,13 @@ def main() -> None:
     weighted_parser.add_argument("--alpha", type=float, default=0.5, help="Weighting factor for BM25 vs semantic search (0.0 to 1.0)")
     weighted_parser.add_argument("--limit", type=int, default=5, help="Number of results to return")
 
+    ## rrf-search parser
+    rrf_parser = subparsers.add_parser("rrf-search", help="Perform a Reciprocal Rank Fusion (RRF) hybrid search")
+    rrf_parser.add_argument("query", type=str, help="Search query")
+    rrf_parser.add_argument("-k", type=int, default=60, help="RRF parameter k")
+    rrf_parser.add_argument("--limit", type=int, default=5, help="Number of results to return")
+    rrf_parser.add_argument("--enhance", type=str, choices=["spell", "rewrite"], help="Query enhancement method")
+
 
 
     # parse the arguments
@@ -26,6 +33,8 @@ def main() -> None:
             normalize_scores_text(*args.scores)
         case "weighted-search":
             weighted_search_text(args.query, args.alpha, args.limit)
+        case "rrf-search":
+            rrf_search_text(args.query, args.k, args.limit, args.enhance)
         case _:
             parser.print_help()
 
