@@ -54,9 +54,9 @@ class HybridSearch:
         return [(doc_id, scores["combined"], scores["bm25"], scores["semantic"]) for doc_id, scores in sorted_docs[:limit]]
 
     def rrf_search(self, query, k, limit=10, enhance=None):
-        if enhance == "spell":
+        if enhance:
             query_original = query
-            query = self.enhance_query(query, method="spell")
+            query = self.enhance_query(query, method=enhance)
             print(f"Enhanced query ({enhance}): '{query_original}' -> '{query}'\n")
 
         bm25_results = self._bm25_search(query, limit*500)
@@ -95,19 +95,42 @@ class HybridSearch:
         api_key = os.environ.get("GEMINI_API_KEY")
         print(f"Using key {api_key[:6]}...")
 
+        model = "gemini-2.5-flash"
         client = genai.Client(api_key=api_key)
 
-        contents = f"""Fix any spelling errors in this movie search query.
+        if method == "spell":
+            contents = f"""Fix any spelling errors in this movie search query.
 
-                    Only correct obvious typos. Don't change correctly spelled words.
+                        Only correct obvious typos. Don't change correctly spelled words.
 
-                    Query: "{query}"
+                        Query: "{query}"
 
-                    If no errors, return the original query.
-                    Corrected:"""
+                        If no errors, return the original query.
+                        Corrected:"""
+        
+        if method == "rewrite":
+            contents = f"""Rewrite this movie search query to be more specific and searchable.
+
+                        Original: "{query}"
+
+                        Consider:
+                        - Common movie knowledge (famous actors, popular films)
+                        - Genre conventions (horror = scary, animation = cartoon)
+                        - Keep it concise (under 10 words)
+                        - It should be a google style search query that's very specific
+                        - Don't use boolean logic
+
+                        Examples:
+
+                        - "that bear movie where leo gets attacked" -> "The Revenant Leonardo DiCaprio bear attack"
+                        - "movie about bear in london with marmalade" -> "Paddington London marmalade"
+                        - "scary movie with bear from few years ago" -> "bear horror movie 2015-2020"
+
+                        Rewritten query:"""
+
 
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=model,
             contents=contents,
         )
         
