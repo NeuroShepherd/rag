@@ -4,7 +4,7 @@
 
 import argparse
 import json
-from semantic_search import SemanticSearch, verify_model, embed_text, verify_embeddings, embed_query_text, chunk_text, semantic_chunking
+from semantic_search import SemanticSearch, verify_model, embed_text, verify_embeddings, embed_query_text, chunk_text, semantic_chunking, ChunkedSemanticSearch
 
 def main():
     parser = argparse.ArgumentParser(description="Semantic Search CLI")
@@ -41,6 +41,13 @@ def main():
     semantic_chunk_parser.add_argument("--max-chunk-size", type=int, default=4, help="Maximum number of sentences per chunk")
     semantic_chunk_parser.add_argument("--overlap", type=int, default=0, help="Number of sentences to overlap between chunks")
 
+    # embed_chunks parser
+    subparsers.add_parser("embed_chunks", help="Test embedding of text chunks")
+    # embed_chunks_parser.add_argument("text", type=str, help="Text to chunk and embed")
+    # embed_chunks_parser.add_argument("--max-chunk-size", type=int, default=4, help="Maximum number of sentences per chunk")
+    # embed_chunks_parser.add_argument("--overlap", type=int, default=0, help="Number of sentences to overlap between chunks")
+    
+
 
 
     args = parser.parse_args()
@@ -68,6 +75,15 @@ def main():
             chunk_text(args.text, chunk_size=args.chunk_size, overlap=args.overlap)
         case "semantic_chunk":
             semantic_chunking(args.text, max_chunk_size=args.max_chunk_size, overlap=args.overlap)
+        case "embed_chunks":
+            # load the moovie documents
+            with open("data/movies.json", "r") as f:
+                data = json.load(f)
+            documents = data["movies"]
+            chunked_search = ChunkedSemanticSearch()
+            embeddings = chunked_search.load_or_create_embeddings(documents)
+            print(f"Generated {len(embeddings)} chunked embeddings")
+
         case _:
             parser.print_help()
 
