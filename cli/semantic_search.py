@@ -134,6 +134,43 @@ class ChunkedSemanticSearch(SemanticSearch):
             return self.build_chunk_embeddings(documents)
 
 
+    def search_chunks(self, query: str, limit: int = 10):
+        if self.chunk_embeddings is None or self.chunk_metadata is None:
+            raise ValueError("No chunk embeddings loaded. Call `load_or_create_embeddings` first.")
+        
+        query_embedding = self.generate_embedding(query)
+        chunk_scores = []
+        for i, chunk_embedding in enumerate(self.chunk_embeddings):
+            score = cosine_similarity(query_embedding, chunk_embedding)
+            chunk_scores.append({
+                "chunk_idx": i,
+                "movie_idx": self.chunk_metadata[i]["movie_idx"],
+                "score": score,
+            })
+
+        movie_index_scores = {}
+        for chunk_score in chunk_scores:
+            movie_idx = chunk_score["movie_idx"]
+            score = chunk_score["score"]
+            if movie_idx not in movie_index_scores:
+                movie_index_scores[movie_idx] = []
+            movie_index_scores[movie_idx].append(score)
+        
+        # sort the movie scores by score in descending order
+        sorted_movie_scores = sorted(movie_index_scores.items(), key=lambda x: max(x[1]), reverse=True)
+        filtered_movies_by_limit = sorted_movie_scores[:limit]
+
+        final_output = []
+        for movie in filtered_movies_by_limit:
+            final_output.append({
+                "id": movie[0],
+                "title": self.document_map[movie[0]]["title"],
+                "document": self.document_map[movie[0]]["description"][:100],
+                "score": round(max(movie[1]), 4),
+                "metadata": self.document_map[movie[0]].get("metadata", {}) # mot really sure which metadata is expected here?
+            })
+
+        return final_output
 
 
 

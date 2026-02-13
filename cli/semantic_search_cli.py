@@ -47,6 +47,11 @@ def main():
     # embed_chunks_parser.add_argument("--max-chunk-size", type=int, default=4, help="Maximum number of sentences per chunk")
     # embed_chunks_parser.add_argument("--overlap", type=int, default=0, help="Number of sentences to overlap between chunks")
     
+    # search_chunked parser
+    search_chunked_parser = subparsers.add_parser("search_chunked", help="Test searching with chunked embeddings")
+    search_chunked_parser.add_argument("query", type=str, help="Search query")
+    search_chunked_parser.add_argument("--limit", type=int, default=5, help="Number of results to return")
+
 
 
 
@@ -83,7 +88,16 @@ def main():
             chunked_search = ChunkedSemanticSearch()
             embeddings = chunked_search.load_or_create_embeddings(documents)
             print(f"Generated {len(embeddings)} chunked embeddings")
-
+        case "search_chunked":
+            chunked_search = ChunkedSemanticSearch()
+            with open("data/movies.json", "r") as f:
+                data = json.load(f)
+            documents = data["movies"]
+            chunked_search.load_or_create_embeddings(documents)
+            results = chunked_search.search_chunks(args.query, args.limit)
+            for i, result in enumerate(results):
+                score, title, description = result["score"], result["title"], result["document"]
+                print(f"{i}. {title} (score: {score:.4f})\n{description}\n")
         case _:
             parser.print_help()
 
