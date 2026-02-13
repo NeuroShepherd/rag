@@ -10,4 +10,4 @@ wheels/
 .venv
 /data/
 
-cache/chunk_embeddings.npy
+cache/chunk_embeddings.npy.env
