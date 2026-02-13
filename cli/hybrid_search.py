@@ -60,7 +60,7 @@ class HybridSearch:
             query = self.enhance_query(query, method=enhance)
             print(f"Enhanced query ({enhance}): '{query_original}' -> '{query}'\n")
 
-        if rerank_method == "individual":
+        if rerank_method in ["individual", "batch"]:
             limit *= 5
         else:
             limit *= 500
@@ -217,7 +217,7 @@ def rrf_search_text(query, k, limit=5, enhance=None, rerank_method=None):
     
     search = HybridSearch(documents=documents)
     results = search.rrf_search(query, k, limit, enhance, rerank_method=rerank_method)
-    if rerank_method == "individual":
+    if rerank_method in ["individual", "batch"]:
         print(f"Reranking top {limit} results using {rerank_method} method...")
     print(f"Reciprocal Rank Fusion Results for '{query}' (k={k}):")
     for i, result in enumerate(results[:limit]):
