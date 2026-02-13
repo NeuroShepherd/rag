@@ -6,6 +6,7 @@ from semantic_search import ChunkedSemanticSearch
 from dotenv import load_dotenv
 from google import genai
 from time import sleep
+from sentence_transformers import CrossEncoder
 
 
 class HybridSearch:
@@ -61,7 +62,7 @@ class HybridSearch:
             query = self.enhance_query(query, method=enhance)
             print(f"Enhanced query ({enhance}): '{query_original}' -> '{query}'\n")
 
-        if rerank_method in ["individual", "batch"]:
+        if rerank_method in ["individual", "batch", "cross_encoder"]:
             limit *= 5
         else:
             limit *= 500
@@ -129,6 +130,15 @@ class HybridSearch:
             for rank, result in enumerate(reranked, start=1):
                 result["llm_score"] = round((len(reranked) - rank + 1) / len(reranked) * 10, 4)
             final_output = reranked[:limit]
+
+        if rerank_method == "cross_encoder":
+            print(f"Reranking top {len(final_output)} documents using cross-encoder...")
+            cross_encoder = CrossEncoder('cross-encoder/ms-marco-TinyBERT-L2-v2')
+            pairs = [(query, result["document"]) for result in final_output]
+            ce_scores = cross_encoder.predict(pairs)
+            for i, result in enumerate(final_output):
+                result["llm_score"] = round(ce_scores[i], 4)
+            final_output = sorted(final_output, key=lambda x: x["llm_score"], reverse=True)[:limit]
 
         return final_output
     
@@ -236,7 +246,7 @@ def rrf_search_text(query, k, limit=5, enhance=None, rerank_method=None):
     
     search = HybridSearch(documents=documents)
     results = search.rrf_search(query, k, limit, enhance, rerank_method=rerank_method)
-    if rerank_method in ["individual", "batch"]:
+    if rerank_method in ["individual", "batch", "cross_encoder"]:
         print(f"Reranking top {limit} results using {rerank_method} method...")
     print(f"Reciprocal Rank Fusion Results for '{query}' (k={k}):")
     for i, result in enumerate(results[:limit]):
