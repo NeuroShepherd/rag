@@ -35,7 +35,7 @@ def main() -> None:
         case "weighted-search":
             weighted_search_text(args.query, args.alpha, args.limit)
         case "rrf-search":
-            rrf_search_text(args.query, args.k, args.limit, args.enhance)
+            rrf_search_text(args.query, args.k, args.limit, args.enhance, args.rerank_method)
         case _:
             parser.print_help()
 

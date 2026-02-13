@@ -4,6 +4,7 @@ from helpers import InvertedIndex
 from semantic_search import ChunkedSemanticSearch
 from dotenv import load_dotenv
 from google import genai
+from time import sleep
 
 
 class HybridSearch:
@@ -53,14 +54,19 @@ class HybridSearch:
         sorted_docs = sorted(combined_scores.items(), key=lambda x: x[1]["combined"], reverse=True)
         return [(doc_id, scores["combined"], scores["bm25"], scores["semantic"]) for doc_id, scores in sorted_docs[:limit]]
 
-    def rrf_search(self, query, k, limit=10, enhance=None):
+    def rrf_search(self, query, k, limit=10, enhance=None, rerank_method=None):
         if enhance:
             query_original = query
             query = self.enhance_query(query, method=enhance)
             print(f"Enhanced query ({enhance}): '{query_original}' -> '{query}'\n")
 
-        bm25_results = self._bm25_search(query, limit*500)
-        semantic_results = self.semantic_search.search_chunks(query, limit*500)
+        if rerank_method == "individual":
+            limit *= 5
+        else:
+            limit *= 500
+
+        bm25_results = self._bm25_search(query, limit)
+        semantic_results = self.semantic_search.search_chunks(query, limit)
         bm25_map = {doc_id: rank for rank, (doc_id, score) in enumerate(bm25_results)}
         semantic_map = {result["id"]: rank for rank, result in enumerate(semantic_results)}
         all_doc_ids = set(bm25_map.keys()) | set(semantic_map.keys())
@@ -88,8 +94,26 @@ class HybridSearch:
                     "semantic_rank": score_data["semantic_rank"] if score_data["semantic_rank"] != float('inf') else "N/A"
                 }
             })
+
+        if rerank_method == "individual":
+            for i, result in enumerate(final_output):
+                print(f"Reranking document {i+1}/{len(final_output)}")
+                print("waiting to avoid rate limits...")
+                sleep(5)
+                print("starting next rerank...")
+                try:
+                    llm_score = llm_rerank(query, result, rerank_method)
+                except Exception as e:
+                    print(f"Error during LLM reranking of document {i+1}: {e}")
+                    print("Sleeping for 4 mins and retrying")
+                    sleep(30)
+                    llm_score = llm_rerank(query, result, rerank_method)
+                result["llm_score"] = round(float(llm_score), 4)
+            final_output = sorted(final_output, key=lambda x: x["llm_score"], reverse=True)[:limit]
+
         return final_output
     
+
     def enhance_query(self, query, method):
         load_dotenv()
         api_key = os.environ.get("GEMINI_API_KEY")
@@ -186,15 +210,51 @@ def weighted_search_text(query, alpha, limit=5):
         title = search.semantic_search.document_map[result[0]]['title']
         print(f"{i+1}. {title}\nHybrid score: {result[1]:.4f}\nBM25: {result[2]:.4f}, Semantic: {result[3]:.4f}\n{search.semantic_search.document_map[result[0]]['description'][:200]}...\n")
 
-def rrf_search_text(query, k, limit=5, enhance=None):
+def rrf_search_text(query, k, limit=5, enhance=None, rerank_method=None):
     with open("data/movies.json", "r") as f:
         data = json.load(f)
     documents = data["movies"]
     
     search = HybridSearch(documents=documents)
-    results = search.rrf_search(query, k, limit, enhance)
-    for i, result in enumerate(results):
+    results = search.rrf_search(query, k, limit, enhance, rerank_method=rerank_method)
+    if rerank_method == "individual":
+        print(f"Reranking top {limit} results using {rerank_method} method...")
+    print(f"Reciprocal Rank Fusion Results for '{query}' (k={k}):")
+    for i, result in enumerate(results[:limit]):
         print(f"{i+1}. {result['title']}")
-        print(f"RRF score: {result['score']:.4f}")
+        print(f"Rerank Score: {result.get('llm_score', 'N/A')}/10")
+        print(f"RRF score: {result['score']:.3f}")
         print(f"BM25 Rank: {result['metadata'].get('bm25_rank', 'N/A')}, Semantic Rank: {result['metadata'].get('semantic_rank', 'N/A')}")
         print(f"{result['document']}...\n")
+
+
+def llm_rerank(query, results, rerank_method):
+    load_dotenv()
+    api_key = os.environ.get("GEMINI_API_KEY")
+    print(f"Using key {api_key[:6]}...")
+
+    model = "gemini-2.5-flash"
+    client = genai.Client(api_key=api_key)
+
+    if rerank_method == "individual":
+        contents  = f"""Rate how well this movie matches the search query.
+
+                    Query: "{query}"
+                    Movie: {results.get("title", "")} - {results.get("document", "")}
+
+                    Consider:
+                    - Direct relevance to query
+                    - User intent (what they're looking for)
+                    - Content appropriateness
+
+                    Rate 0-10 (10 = perfect match).
+                    Give me ONLY the number in your response, no other text or explanation.
+
+                    Score:"""
+        
+    response = client.models.generate_content(
+        model=model,
+        contents=contents,
+    )
+    
+    return response.text.strip()
