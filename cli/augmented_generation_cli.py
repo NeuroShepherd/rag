@@ -1,7 +1,7 @@
 
 
 import argparse, json
-from hybrid_search import HybridSearch, rag_text, rag_summary_text, rag_citations_text
+from hybrid_search import HybridSearch, rag_text, rag_summary_text, rag_citations_text, rag_question_text
 
 
 def main():
@@ -23,7 +23,17 @@ def main():
     citation_parser.add_argument("query", type=str, help="Search query to generate citations for")
     citation_parser.add_argument("--limit", type=int, default=5, help="Number of search results to use for citation generation")
 
+    # question parser
+    question_parser = subparsers.add_parser("question", help="Answer a question using RAG")
+    question_parser.add_argument("query", type=str, help="Question to answer using RAG")
+    question_parser.add_argument("--limit", type=int, default=5, help="Number of search results to use for answering the question")
 
+
+
+
+    with open("data/movies.json", "r") as f:
+        data = json.load(f)
+    documents = data["movies"]
 
 
     args = parser.parse_args()
@@ -31,29 +41,25 @@ def main():
     match args.command:
         case "rag":
             query = args.query
-            with open("data/movies.json", "r") as f:
-                data = json.load(f)
-            documents = data["movies"]
             search = HybridSearch(documents=documents)
             results = search.rrf_search(query=query, k=60, limit=5)
             rag_text(query, documents, results[:5])
 
         case "summarize":
             query = args.query
-            with open("data/movies.json", "r") as f:
-                data = json.load(f)
-            documents = data["movies"]
             search = HybridSearch(documents=documents)
             results = search.rrf_search(query=query, k=60, limit=args.limit)
             rag_summary_text(query, documents, results[:args.limit])
         case "citations":
             query = args.query
-            with open("data/movies.json", "r") as f:
-                data = json.load(f)
-            documents = data["movies"]
             search = HybridSearch(documents=documents)
             results = search.rrf_search(query=query, k=60, limit=args.limit)
             rag_citations_text(query, documents, results[:args.limit])
+        case "question":
+            query = args.query
+            search = HybridSearch(documents=documents)
+            results = search.rrf_search(query=query, k=60, limit=args.limit)
+            rag_question_text(query, documents, results[:args.limit])
         case _:
             parser.print_help()
 
