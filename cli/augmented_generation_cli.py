@@ -1,7 +1,7 @@
 
 
 import argparse, json
-from hybrid_search import HybridSearch, rag_text, rag_summary_text
+from hybrid_search import HybridSearch, rag_text, rag_summary_text, rag_citations_text
 
 
 def main():
@@ -17,6 +17,11 @@ def main():
     summarize_parser = subparsers.add_parser("summarize", help="Summarize a given text")
     summarize_parser.add_argument("query", type=str, help="Text to summarize")
     summarize_parser.add_argument("--limit", type=int, default=5, help="Number of search results to use for summarization")
+
+    # citation parser
+    citation_parser = subparsers.add_parser("citations", help="Generate citations for a given query")
+    citation_parser.add_argument("query", type=str, help="Search query to generate citations for")
+    citation_parser.add_argument("--limit", type=int, default=5, help="Number of search results to use for citation generation")
 
 
 
@@ -41,6 +46,14 @@ def main():
             search = HybridSearch(documents=documents)
             results = search.rrf_search(query=query, k=60, limit=args.limit)
             rag_summary_text(query, documents, results[:args.limit])
+        case "citations":
+            query = args.query
+            with open("data/movies.json", "r") as f:
+                data = json.load(f)
+            documents = data["movies"]
+            search = HybridSearch(documents=documents)
+            results = search.rrf_search(query=query, k=60, limit=args.limit)
+            rag_citations_text(query, documents, results[:args.limit])
         case _:
             parser.print_help()
 

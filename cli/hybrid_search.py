@@ -438,3 +438,52 @@ def rag_summary_text(query, docs, results):
     
     print("Search Results:")
     print(response.text.strip())
+
+
+def rag_citations(query, docs, results):
+    load_dotenv()
+    api_key = os.environ.get("GEMINI_API_KEY")
+    print(f"Using key {api_key[:6]}...")
+
+    model = "gemini-2.5-flash-lite"
+
+    client = genai.Client(api_key=api_key)
+
+    # get titles from results
+    result_titles = [r["title"] for r in results] 
+    # only pass docs where the title is in the results
+    filtered_docs = [doc for doc in docs if doc["title"] in result_titles]
+
+    content = f"""Answer the question or provide information based on the provided documents.
+
+                This should be tailored to Hoopla users. Hoopla is a movie streaming service.
+
+                If not enough information is available to give a good answer, say so but give as good of an answer as you can while citing the sources you have.
+
+                Query: {query}
+
+                Documents:
+                {filtered_docs}
+
+                Instructions:
+                - Provide a comprehensive answer that addresses the query
+                - Cite sources using [1], [2], etc. format when referencing information
+                - If sources disagree, mention the different viewpoints
+                - If the answer isn't in the documents, say "I don't have enough information"
+                - Be direct and informative
+
+                Answer:"""
+    
+    response = client.models.generate_content(
+        model=model,
+        contents=content,
+    )
+
+    return response
+
+
+def rag_citations_text(query, docs, results):
+    response = rag_citations(query, docs, results)
+    
+    print("Search Results with Citations:")
+    print(response.text.strip())
