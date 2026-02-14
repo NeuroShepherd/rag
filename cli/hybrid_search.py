@@ -239,7 +239,7 @@ def weighted_search_text(query, alpha, limit=5):
         title = search.semantic_search.document_map[result[0]]['title']
         print(f"{i+1}. {title}\nHybrid score: {result[1]:.4f}\nBM25: {result[2]:.4f}, Semantic: {result[3]:.4f}\n{search.semantic_search.document_map[result[0]]['description'][:200]}...\n")
 
-def rrf_search_text(query, k, limit=5, enhance=None, rerank_method=None):
+def rrf_search_text(query, k, limit=5, enhance=None, rerank_method=None, evaluate=False):
     with open("data/movies.json", "r") as f:
         data = json.load(f)
     documents = data["movies"]
@@ -255,6 +255,9 @@ def rrf_search_text(query, k, limit=5, enhance=None, rerank_method=None):
         print(f"RRF score: {result['score']:.3f}")
         print(f"BM25 Rank: {result['metadata'].get('bm25_rank', 'N/A')}, Semantic Rank: {result['metadata'].get('semantic_rank', 'N/A')}")
         print(f"{result['document']}...\n")
+
+    if evaluate:
+        llm_evaluator(query, results[:limit])
 
 
 def llm_rerank(query, results, rerank_method):
@@ -313,3 +316,47 @@ def llm_rerank(query, results, rerank_method):
         return json.loads(response.text.strip())
     
     return response.text.strip()
+
+
+
+def llm_evaluator(query, results):
+    load_dotenv()
+    api_key = os.environ.get("GEMINI_API_KEY")
+    print(f"Using key {api_key[:6]}...")
+
+    model = "gemini-2.5-flash"
+    client = genai.Client(api_key=api_key)
+
+    content = f"""Rate how relevant each result is to this query on a 0-3 scale:
+
+                Query: "{query}"
+
+                Results:
+                {results}
+
+                Scale:
+                - 3: Highly relevant
+                - 2: Relevant
+                - 1: Marginally relevant
+                - 0: Not relevant
+
+                Do NOT give any numbers out than 0, 1, 2, or 3.
+
+                Return ONLY the scores in the same order you were given the documents. Return a valid JSON list, nothing else. For example:
+
+                [2, 0, 3, 2, 0, 1]"""
+    
+    response = client.models.generate_content(
+        model=model,
+        contents=content,
+    )
+
+    # Extract JSON from markdown code blocks
+    match = re.search(r"\[.*\]", response.text, re.S)
+    if match:
+        match_scores = json.loads(match.group())
+
+    
+    for i, result in enumerate(results):
+         print(f"{i+1}. {result['title']}: {match_scores[i]}/3")
+    
